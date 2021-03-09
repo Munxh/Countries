@@ -8,8 +8,10 @@ export const StartScreen = () => {
 
     const { countries } = useSelector((state: ReduxState) => state.countriesReducer);
     const [showCountries, setShowCountries] = useState<boolean>(false);
+    const [showLanguages, setShowLanguages] = useState<boolean>(false);
     const [smallestCountry, setSmallestCountry] = useState<string>('');
     const [biggestCountry, setBiggestCountry] = useState<string>('');
+    const [languagesState, setLanguagesState] = useState<Map<string, string[]>>(new Map());
     const [averagePopulation, setAveragePopulation] = useState<string>('');
 
     const dispatch = useDispatch();
@@ -20,9 +22,9 @@ export const StartScreen = () => {
             return <></>
         } else {
             // @ts-ignore
-            return (countries?.map(country => { //this could easily be a functional component
+            return (countries?.map((country, index) => { //this could easily be a functional component
                     return (
-                        <View style={styles.card}>
+                        <View style={styles.card} key={index + country.population}>
                             <Text style={styles.header}>
                                 {country.name}
                             </Text>
@@ -42,22 +44,57 @@ export const StartScreen = () => {
         }
     }
 
+    const renderLanguages = () => {
+        if (languagesState == undefined) {
+            return <></>
+        } else {
+            const objectsToRender = []; //since we cant return values from the for loop directly, we collect them in this array
+            for (const [key, value] of languagesState.entries()) { //looping through each entry of the map
+                objectsToRender.push(
+                    <View style={styles.card} key={key}>
+                        <Text style={styles.header}>
+                            {key}
+                        </Text>
+                        {value.map((language, index) => {
+                                return (
+                                    <Text key={index}>
+                                        Spoken by: {language}
+                                    </Text>
+                                )
+                            },
+                        )}
+                    </View>
+                )
+            }
+           return objectsToRender;
+        }
+    }
+
     useEffect(() => {
         dispatch(getCountries()); //calling an action to get the countries from the api
-    }, [countries]);
+    }, []);
 
 
     useEffect(() => {
-        //using one for-loop to calculate everything, to improve the run time
+        //using one for-loop to calculate everything, to improve the run time, tried to avoid using nested loops for better runtime
         var total = 0;
-        var smallestCountry = '';
-        var biggestCountry = '';
+        var smallestCountry: string = '';
+        var biggestCountry: string = '';
+        var languages: Map<string, string[]> = new Map();
         if (countries != undefined) {
             var smallestCountryValue = countries[0].area;
             var biggestCountryValue = countries[0].area;
             var total = 0;
             // @ts-ignore
             countries?.map(country => {
+                country.languages.map(language => {
+                    if (languages.get(language.name) != undefined) {
+                        // @ts-ignore
+                        languages.set(language.name, [...languages.get(language.name), country.name]);
+                    } else {
+                        languages.set(language.name, [country.name])
+                    }
+                });
                 // @ts-ignore
                 if (smallestCountryValue > country.area) {
                     smallestCountry = country.name;
@@ -72,6 +109,7 @@ export const StartScreen = () => {
             });
 
         }
+        setLanguagesState(languages);
         setSmallestCountry(smallestCountry);
         setBiggestCountry(biggestCountry);
         // @ts-ignore
@@ -80,6 +118,9 @@ export const StartScreen = () => {
 
     const hideCountries = () => {
         setShowCountries(showCountries => !showCountries);
+    }
+    const hideLanguages = () => {
+        setShowLanguages(showLanguages => !showLanguages);
     }
 
     const numberFormatted = (num: number) => {
@@ -99,6 +140,12 @@ export const StartScreen = () => {
                 </Text>
             </TouchableOpacity>}
             {showCountries && renderCountries()}
+            <TouchableOpacity onPress={hideLanguages}>
+                <Text style={styles.headerTop}>
+                    Languages {showLanguages ? '↓' : '→'}
+                </Text>
+            </TouchableOpacity>
+            {showLanguages && renderLanguages()}
         </ScrollView>
     )
 
